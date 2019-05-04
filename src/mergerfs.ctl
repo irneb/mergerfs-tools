@@ -130,7 +130,7 @@ def build_arg_parser():
     removeopt.set_defaults(func=cmd_remove)
 
     listopt = subparsers.add_parser('list')
-    listopt.add_argument('type',choices=['options','values'])
+    listopt.add_argument('type',choices=['options','values', 'json'])
     listopt.set_defaults(func=cmd_list)
 
     getopt = subparsers.add_parser('get')
@@ -195,6 +195,8 @@ def cmd_list(fspaths,args):
         return cmd_list_values(fspaths,args)
     if args.type == 'options':
         return cmd_list_options(fspaths,args)
+    if args.type == 'json':
+        return cmd_list_json(fspaths,args)
 
 def cmd_list_options(fspaths,args):
     for fspath in fspaths:
@@ -216,6 +218,29 @@ def cmd_list_values(fspaths,args):
             value = os.getxattr(ctrlfile,key)
             output += '    {0}: {1}\n'.format(key,value.decode())
         print(output,end='')
+
+def cmd_list_json(fspaths,args):
+    count = len(fspaths)
+    output = '[\n'
+    for fspath in fspaths:
+        count -= 1
+        ctrlfile = control_file(fspath)
+        keys = os.listxattr(ctrlfile)
+        output += ('   {{\"mount\":\"{0}\",\n    \"options\":[\n').format(fspath)
+        kcount = len(keys)
+        for key in keys:
+            kcount -= 1
+            value = os.getxattr(ctrlfile,key)
+            output +=  '       \"{0}\":\"{1}\"'.format(key,value.decode())
+            if kcount > 0:
+                output += ','
+            output += '\n'
+        output += '   ]}'
+        if count > 0:
+            output += ','
+        output += '\n'
+    output += ']\n'
+    print(output,end='')
 
 
 def cmd_get(fspaths,args):
